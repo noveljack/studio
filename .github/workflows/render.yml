@@ -38,6 +38,6 @@ jobs:
 
       - name: Render episode
         env:
-          CTX: ${{ secrets.CTX }}
-          VARS: ${{ vars.VARS }}
+          RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
+          RCLONE_REMOTE: ${{ secrets.RCLONE_REMOTE }}
         run: python ci.py render "${{ github.event.inputs.episode }}"
