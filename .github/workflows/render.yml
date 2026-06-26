@@ -1,0 +1,43 @@
+name: Render episode
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: "Episode id (folder name, e.g. episode01)"
+        required: true
+        default: "episode01"
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout content repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.CONTENT_REPO }}
+          token: ${{ secrets.CONTENT_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Node dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Render episode
+        env:
+          CTX: ${{ secrets.CTX }}
+          VARS: ${{ vars.VARS }}
+        run: python ci.py render "${{ github.event.inputs.episode }}"
