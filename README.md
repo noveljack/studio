@@ -17,7 +17,10 @@ _Settings → Secrets and variables → Actions_
 **Secrets**
 - `CONTENT_REPO` — `owner/repo` of the private content repo to render.
 - `CONTENT_TOKEN` — fine-grained PAT with read access to that repo (Contents: read).
-- `CTX` — JSON: `{"RCLONE_CONFIG": "<rclone.conf text>", "RCLONE_REMOTE": "<remote>:market_db"}`
+- `RCLONE_CONFIG` — the full rclone config, pasted in **as-is** (multi-line, no
+  escaping — exactly like the other repos).
+- `RCLONE_REMOTE` — e.g. `gdrive:market_db`.
 
-**Variables**
-- `VARS` — JSON: `{"VIDEO_DRIVE_SUBDIR": "moneypsyche", "WHISPER_MODEL": "base.en"}`
+**Variables** (optional — defaults shown)
+- `VIDEO_DRIVE_SUBDIR` — `moneypsyche`
+- `WHISPER_MODEL` — `base.en`
