@@ -1,5 +1,14 @@
 name: Render episode
 
+# ---------------------------------------------------------------------------
+# BEFORE THIS WORKFLOW WILL RUN: replace the brace sentinels.
+#   Find/replace across this file:
+#     <<<   ->   ${ {   (a dollar sign then two open braces, no space)
+#     >>>   ->   } }    (two close braces)
+# Every GitHub Actions expression in this file is wrapped in <<< ... >>>.
+# Nothing else uses <<< or >>>, and shell append (>>) is left untouched.
+# ---------------------------------------------------------------------------
+
 on:
   workflow_dispatch:
     inputs:
@@ -9,7 +18,7 @@ on:
         default: "episode01"
 
 concurrency:
-  group: render-$ github.event.inputs.episode 
+  group: render-<<< github.event.inputs.episode >>>
   cancel-in-progress: false
 
 env:
@@ -27,8 +36,8 @@ jobs:
       - name: Checkout content repo
         uses: actions/checkout@v4
         with:
-          repository: $ secrets.CONTENT_REPO 
-          token: $ secrets.CONTENT_TOKEN 
+          repository: <<< secrets.CONTENT_REPO >>>
+          token: <<< secrets.CONTENT_TOKEN >>>
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -59,7 +68,7 @@ jobs:
 
       - name: Prepare episode (whisper, timing, plan, shard ranges)
         id: prep
-        run: python ci.py prep "$ github.event.inputs.episode "
+        run: python ci.py prep "<<< github.event.inputs.episode >>>"
 
       - name: Upload prep artifact
         uses: actions/upload-artifact@v4
@@ -80,8 +89,8 @@ jobs:
       - name: Checkout content repo
         uses: actions/checkout@v4
         with:
-          repository: $ secrets.CONTENT_REPO 
-          token: $ secrets.CONTENT_TOKEN 
+          repository: <<< secrets.CONTENT_REPO >>>
+          token: <<< secrets.CONTENT_TOKEN >>>
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -112,14 +121,14 @@ jobs:
 
       - name: Render Blender shots
         if: <<< needs.prep.outputs.has_blender == 'true' >>>
-        run: python ci.py blender "$ github.event.inputs.episode "
+        run: python ci.py blender "<<< github.event.inputs.episode >>>"
 
       - name: Upload Blender clips
         if: <<< needs.prep.outputs.has_blender == 'true' >>>
         uses: actions/upload-artifact@v4
         with:
           name: blender-clips
-          path: episodes/$ github.event.inputs.episode /video/**
+          path: episodes/<<< github.event.inputs.episode >>>/video/**
           if-no-files-found: ignore
           retention-days: 1
 
@@ -137,8 +146,8 @@ jobs:
       - name: Checkout content repo
         uses: actions/checkout@v4
         with:
-          repository: $ secrets.CONTENT_REPO 
-          token: $ secrets.CONTENT_TOKEN 
+          repository: <<< secrets.CONTENT_REPO >>>
+          token: <<< secrets.CONTENT_TOKEN >>>
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -183,10 +192,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: blender-clips
-          path: episodes/$ github.event.inputs.episode /video
+          path: episodes/<<< github.event.inputs.episode >>>/video
 
       - name: Render shard <<< matrix.shard >>>
-        run: python ci.py render-shard "$ github.event.inputs.episode " <<< matrix.shard >>> <<< matrix.start >>> <<< matrix.end >>>
+        run: python ci.py render-shard "<<< github.event.inputs.episode >>>" <<< matrix.shard >>> <<< matrix.start >>> <<< matrix.end >>>
 
       - name: Upload segment
         uses: actions/upload-artifact@v4
@@ -205,8 +214,8 @@ jobs:
       - name: Checkout content repo
         uses: actions/checkout@v4
         with:
-          repository: $ secrets.CONTENT_REPO 
-          token: $ secrets.CONTENT_TOKEN 
+          repository: <<< secrets.CONTENT_REPO >>>
+          token: <<< secrets.CONTENT_TOKEN >>>
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -236,6 +245,6 @@ jobs:
 
       - name: Gather, mux audio, thumbnail, upload
         env:
-          RCLONE_CONFIG: $ secrets.RCLONE_CONFIG 
-          RCLONE_REMOTE: $ secrets.RCLONE_REMOTE 
-        run: python ci.py gather "$ github.event.inputs.episode "
+          RCLONE_CONFIG: <<< secrets.RCLONE_CONFIG >>>
+          RCLONE_REMOTE: <<< secrets.RCLONE_REMOTE >>>
+        run: python ci.py gather "<<< github.event.inputs.episode >>>"
