@@ -23,4 +23,4 @@ _Settings → Secrets and variables → Actions_
 
 **Variables** (optional — defaults shown)
 - `VIDEO_DRIVE_SUBDIR` — `moneypsyche`
-- `WHISPER_MODEL` — `base.en`
+- `WHISPER_MODEL` — `large-v3`
