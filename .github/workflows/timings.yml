@@ -1,0 +1,67 @@
+name: Word timings
+
+# Exports real per-word timestamps for one episode's narration and drops the
+# JSON on Drive. Timings only: no Remotion, no Blender, no video, no artifact.
+#
+# The transcript is aligned to the episode's verbatim script (captions.txt, or
+# short-captions.txt for a Short) so mis-heard words are corrected while timing
+# comes from the audio. Runs quiet (CI_QUIET=1) and the result goes to Drive, so
+# nothing about the content leaks into this public runner's log or artifacts.
+#
+# Use the output to author data.json scene cues against real speech instead of
+# estimates. See timings.py in the content repo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: "Episode id (folder name, e.g. episode01)"
+        required: true
+        default: "episode01"
+      kind:
+        description: "Which narration to time"
+        required: true
+        default: "long"
+        type: choice
+        options:
+          - long
+          - short
+
+concurrency:
+  group: timings-${{ github.event.inputs.episode }}-${{ github.event.inputs.kind }}
+  cancel-in-progress: false
+
+env:
+  CI_QUIET: "1"
+
+jobs:
+  timings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout content repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.CONTENT_REPO }}
+          token: ${{ secrets.CONTENT_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Export word timings to Drive
+        env:
+          RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
+          RCLONE_REMOTE: ${{ secrets.RCLONE_REMOTE }}
+          VIDEO_DRIVE_SUBDIR: ${{ secrets.VIDEO_DRIVE_SUBDIR }}
+          WHISPER_MODEL: ${{ vars.WHISPER_MODEL }}
+        run: >
+          python timings.py
+          "${{ github.event.inputs.episode }}"
+          "${{ github.event.inputs.kind }}"
