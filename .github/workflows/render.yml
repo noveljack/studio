@@ -1,5 +1,17 @@
 name: Render episode
 
+# Public orchestrator for the episode pipeline. Runs from this public repo so it
+# uses free CI minutes, checks out the private content repo with a token, and
+# hands each phase to vidgen's ci.py.
+#
+# Two things were removed on 11 Sep 2026:
+#   1. The Blender job. No episode has ever opted a scene into `scene.blender`,
+#      and blender/ was deleted from the content repo.
+#   2. The placeholder thumbnail. Thumbnails are authored at Gate 1 with Google
+#      Flow plus Canva, so the coded plate that ci.py used to render and copy to
+#      Drive was pure noise. The gather phase is now called through a tiny
+#      wrapper that disables that one function. Everything else is unchanged.
+
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +34,6 @@ jobs:
 
     outputs:
       matrix: ${{ steps.prep.outputs.matrix }}
-      has_blender: ${{ steps.prep.outputs.has_blender }}
 
     steps:
       - name: Checkout content repo
@@ -77,60 +88,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 1
 
-  blender:
-    needs: prep
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-
-    steps:
-      - name: Checkout content repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ secrets.CONTENT_REPO }}
-          token: ${{ secrets.CONTENT_TOKEN }}
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-
-      - name: Download prep artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: prep
-
-      - name: Cache Blender
-        uses: actions/cache@v4
-        with:
-          path: ~/blender
-          key: blender-4.2.1-linux-x64
-
-      - name: Install Blender (only if 3D shots planned)
-        if: ${{ needs.prep.outputs.has_blender == 'true' }}
-        run: |
-          if [ ! -x "$HOME/blender/blender" ]; then
-            mkdir -p "$HOME/blender"
-            curl -sSL https://download.blender.org/release/Blender4.2/blender-4.2.1-linux-x64.tar.xz -o /tmp/blender.tar.xz
-            tar -xJf /tmp/blender.tar.xz -C "$HOME/blender" --strip-components=1
-          fi
-          echo "$HOME/blender" >> $GITHUB_PATH
-
-      - name: Render Blender shots
-        if: ${{ needs.prep.outputs.has_blender == 'true' }}
-        run: python ci.py blender "${{ github.event.inputs.episode }}"
-
-      - name: Upload Blender clips
-        if: ${{ needs.prep.outputs.has_blender == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: blender-clips
-          path: public/episodes/${{ github.event.inputs.episode }}/video/**
-          if-no-files-found: ignore
-          retention-days: 1
-
   render:
-    needs: [prep, blender]
+    needs: prep
     runs-on: ubuntu-latest
     timeout-minutes: 300
 
@@ -183,13 +142,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: prep
-
-      - name: Download Blender clips
-        if: ${{ needs.prep.outputs.has_blender == 'true' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: blender-clips
-          path: public/episodes/${{ github.event.inputs.episode }}/video
 
       - name: Render shard ${{ matrix.shard }}
         run: >
@@ -264,9 +216,21 @@ jobs:
           merge-multiple: true
           path: segments
 
-      - name: Gather, mux audio, thumbnail, upload
+      - name: Gather, mux audio, upload (no thumbnail)
         env:
           RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
           RCLONE_REMOTE: ${{ secrets.RCLONE_REMOTE }}
           VIDEO_DRIVE_SUBDIR: ${{ secrets.VIDEO_DRIVE_SUBDIR }}
-        run: python ci.py gather "${{ github.event.inputs.episode }}"
+          EPISODE: ${{ github.event.inputs.episode }}
+        run: |
+          python - <<'PY'
+          import os
+          import ci
+
+          # Thumbnails are authored at Gate 1 with Google Flow plus Canva. The
+          # coded placeholder plate is therefore never rendered and never copied
+          # to Drive. Remove these two lines to restore the old behaviour.
+          ci._render_thumbnail = lambda *a, **k: None
+
+          ci.gather(os.environ["EPISODE"])
+          PY
