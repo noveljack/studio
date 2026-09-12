@@ -1,17 +1,5 @@
 name: Render episode
 
-# Public orchestrator for the episode pipeline. Runs from this public repo so it
-# uses free CI minutes, checks out the private content repo with a token, and
-# hands each phase to vidgen's ci.py.
-#
-# Two things were removed on 11 Sep 2026:
-#   1. The Blender job. No episode has ever opted a scene into `scene.blender`,
-#      and blender/ was deleted from the content repo.
-#   2. The placeholder thumbnail. Thumbnails are authored at Gate 1 with Google
-#      Flow plus Canva, so the coded plate that ci.py used to render and copy to
-#      Drive was pure noise. The gather phase is now called through a tiny
-#      wrapper that disables that one function. Everything else is unchanged.
-
 on:
   workflow_dispatch:
     inputs:
